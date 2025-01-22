@@ -31,14 +31,6 @@ def main():
             #wait 0,5 second
             if not GPIO.input(pin) : 
                 print("Pin "+str(pin)+" is working" )
-                
-        #cleaning all GPIO's 
-        GPIO.cleanup()
-        print("Shutdown All relays")
-            
-    #cleaning all GPIO's 
-    GPIO.cleanup()
-    print("Shutdown All relays")
 
 if __name__ == "__main__":
     main()
