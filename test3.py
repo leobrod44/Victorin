@@ -7,18 +7,20 @@ GPIO.setmode(GPIO.BCM)
 #removing the warings 
 GPIO.setwarnings(False)
 #creating a list (array) with the number of GPIO's that we use 
-pins = [22,27] 
+pins = [18, 36, 38] 
 
 #setting the mode for all pins so all will be switched on 
 GPIO.setup(pins, GPIO.OUT)
 
-while True:
-        GPIO.output(22,  1)
-        GPIO.output(27,  0)
-        print("high")
-        time.sleep(2)
-        GPIO.output(22,  0)
-        GPIO.output(27,  0)
-        print("low")
-        time.sleep(2)
+for pin in pins:
+    GPIO.output(pin,  1)
+    time.sleep(1)
+
+for pin in pins:
+    GPIO.output(pin,  0)
+    time.sleep(1)
+
+GPIO.cleanup()
+    
+
       
