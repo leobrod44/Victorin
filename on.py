@@ -13,6 +13,6 @@ pins = [18,17,15,14, 22, 27]
 GPIO.setup(pins, GPIO.OUT)
 
 for pin in pins:
-    GPIO.output(pin,  GPIO.HIGH)
+    GPIO.output(pin,  1)
 
       

@@ -14,6 +14,6 @@ GPIO.setup(pins, GPIO.OUT)
 
 
 for pin in pins:
-    GPIO.output(pin,  GPIO.LOW)
+    GPIO.output(pin,  0)
 
     

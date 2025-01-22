@@ -14,9 +14,9 @@ GPIO.setup(pins, GPIO.OUT)
 
 while True:
     for pin in pins:
-        GPIO.output(pin,  GPIO.HIGH)
+        GPIO.output(pin,  1)
         time.sleep(1)
     for pin in pins:
-        GPIO.output(pin,  GPIO.LOW)
+        GPIO.output(pin,  0)
         time.sleep(1)
       

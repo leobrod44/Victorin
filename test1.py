@@ -13,14 +13,14 @@ pins = [18,17,15,14, 22, 27]
 GPIO.setup(pins, GPIO.OUT)
 
 while True:
-    GPIO.output(14,  GPIO.HIGH)
-    GPIO.output(22,  GPIO.HIGH)
-    GPIO.output(27,  GPIO.HIGH)
+    GPIO.output(14,  1)
+    GPIO.output(22,  1)
+    GPIO.output(27,  1)
     #wait 0,5 second
     time.sleep(2)
 
-    GPIO.output(14,  GPIO.LOW)
-    GPIO.output(22,  GPIO.LOW)
-    GPIO.output(27,  GPIO.LOW)
+    GPIO.output(14,  0)
+    GPIO.output(22,  0)
+    GPIO.output(27,  0)
 
     time.sleep(2)

@@ -11,6 +11,6 @@ GPIO.setwarnings(False)
 #setting the mode for all pins so all will be switched on 
 GPIO.setup([22,27], GPIO.OUT)
 
-GPIO.output(22,  GPIO.HIGH)
+GPIO.output(22,  1)
 
-GPIO.output(27,  GPIO.HIGH)
+GPIO.output(27,  1)
