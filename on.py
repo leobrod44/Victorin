@@ -12,8 +12,7 @@ pins = [18,17,15,14, 22, 27]
 #setting the mode for all pins so all will be switched on 
 GPIO.setup(pins, GPIO.OUT)
 
-while True:
-    for pin in pins:
-        GPIO.output(pin,  GPIO.HIGH)
+for pin in pins:
+    GPIO.output(pin,  GPIO.HIGH)
 
       
