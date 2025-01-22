@@ -15,25 +15,26 @@ def main():
     #setting the mode for all pins so all will be switched on 
     GPIO.setup(pins, GPIO.OUT)
 
-    #for loop where pin = 18 next 17 ,15, 14 
-    for pin in pins :
-        #setting the GPIO to HIGH or 1 or true
-        GPIO.output(pin,  GPIO.HIGH)
-        #wait 0,5 second
-        time.sleep(0.5)
-        if not GPIO.input(pin) : 
-            print("Pin "+str(pin)+" is working" )
-
-    time.sleep(5)
-
-    #for loop where pin = 18 next 17 ,15, 14 
-    for pin in pins :
-        #setting the GPIO to LOW or 0 or false
-        GPIO.output(pin,  GPIO.LOW)
-        #wait 0,5 second
-        time.sleep(0.5)
-        if not GPIO.input(pin) : 
-            print("Pin "+str(pin)+" is working" )
+    while True:
+        #for loop where pin = 18 next 17 ,15, 14 
+        for pin in pins :
+            #setting the GPIO to HIGH or 1 or true
+            GPIO.output(pin,  GPIO.HIGH)
+            #wait 0,5 second
+            time.sleep(2)
+            if not GPIO.input(pin) : 
+                print("Pin "+str(pin)+" is working" )
+        
+        for pin in pins :
+            #setting the GPIO to HIGH or 1 or true
+            GPIO.output(pin,  GPIO.LOW)
+            #wait 0,5 second
+            if not GPIO.input(pin) : 
+                print("Pin "+str(pin)+" is working" )
+                
+        #cleaning all GPIO's 
+        GPIO.cleanup()
+        print("Shutdown All relays")
             
     #cleaning all GPIO's 
     GPIO.cleanup()
