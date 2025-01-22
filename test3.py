@@ -13,12 +13,12 @@ pins = [27]
 GPIO.setup(pins, GPIO.OUT)
 
 while True:
-    for pin in pins:
-        GPIO.output(pin,  1)
+        GPIO.output(22,  1)
+        GPIO.output(27,  0)
         print("high")
         time.sleep(2)
-    for pin in pins:
-        GPIO.output(pin,  0)
+        GPIO.output(22,  0)
+        GPIO.output(27,  0)
         print("low")
         time.sleep(2)
       
