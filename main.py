@@ -5,7 +5,6 @@ import time
 def main():
     # getting the main GPIO libraly
 
-
     # setting a current mode
     GPIO.setmode(GPIO.BCM)
     #removing the warings 
@@ -15,6 +14,8 @@ def main():
 
     #setting the mode for all pins so all will be switched on 
     GPIO.setup(pins, GPIO.OUT)
+
+    GPIO.output(27,  GPIO.HIGH)
 
     #for loop where pin = 18 next 17 ,15, 14 
     for pin in pins :
