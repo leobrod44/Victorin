@@ -26,6 +26,9 @@ def main():
         if not GPIO.input(pin) : 
             print("Pin "+str(pin)+" is working" )
 
+    time.sleep(30)
+
+
     #for loop where pin = 18 next 17 ,15, 14 
     for pin in pins :
         #setting the GPIO to LOW or 0 or false
