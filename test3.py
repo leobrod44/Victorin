@@ -15,8 +15,10 @@ GPIO.setup(pins, GPIO.OUT)
 while True:
     for pin in pins:
         GPIO.output(pin,  1)
-        time.sleep(1)
+        print("high")
+        time.sleep(2)
     for pin in pins:
         GPIO.output(pin,  0)
-        time.sleep(1)
+        print("low")
+        time.sleep(2)
       
