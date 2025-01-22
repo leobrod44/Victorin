@@ -16,21 +16,18 @@ def main():
     GPIO.setup(pins, GPIO.OUT)
 
     while True:
-        #for loop where pin = 18 next 17 ,15, 14 
-        for pin in pins :
-            #setting the GPIO to HIGH or 1 or true
-            GPIO.output(pin,  GPIO.HIGH)
-            #wait 0,5 second
-            time.sleep(2)
-            if not GPIO.input(pin) : 
-                print("Pin "+str(pin)+" is working" )
-        
-        for pin in pins :
-            #setting the GPIO to HIGH or 1 or true
-            GPIO.output(pin,  GPIO.LOW)
-            #wait 0,5 second
-            if not GPIO.input(pin) : 
-                print("Pin "+str(pin)+" is working" )
+        GPIO.output(14,  GPIO.HIGH)
+        GPIO.output(22,  GPIO.HIGH)
+        GPIO.output(27,  GPIO.HIGH)
+        #wait 0,5 second
+        time.sleep(2)
+
+        GPIO.output(14,  GPIO.LOW)
+        GPIO.output(22,  GPIO.LOW)
+        GPIO.output(27,  GPIO.LOW)
+
+        time.sleep(2)
+
 
 if __name__ == "__main__":
     main()
