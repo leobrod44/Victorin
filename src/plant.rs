@@ -2,9 +2,9 @@ use chrono::Duration;
 
 pub(crate) struct Plant{
     id: i32,
-    name: String,
-    humidity: f32,
-    temperature: f32,
+    pub name: String,
+    pub humidity: f32,
+    pub temperature: f32,
     
 }
 

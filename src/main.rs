@@ -22,9 +22,9 @@ impl Device {
             gpio: Gpio::new().expect("Failed to initialize GPIO"),
             name,
             cycle,
-            duration
+            duration,
             last_trigger: Utc::now(),
-            target,
+            target
         }
     }
     fn activate(&mut self){
@@ -60,14 +60,16 @@ impl Pump {
 
 struct System {
     devices: Vec<Device>,
+    pump: Pump,
     open: bool,
 }
 
 impl System {
 
-    fn init(devices: Vec<Device>) -> System {
+    fn init(devices: Vec<Device>, pump: Pump) -> System {
         System {
             devices,
+            pump,
             open: false,
         }
     }
@@ -77,9 +79,16 @@ impl System {
         for device in &mut self.devices {
             if now.signed_duration_since(device.last_trigger) >= device.cycle {
                 println!("{} activated", device.name);
+                for plant in &device.target {
+                    println!("{} is watered", plant.name);
+                }
                 device.activate();
                 sleep( std::time::Duration::from_secs(device.duration.num_seconds() as u64));
                 device.deactivate();
+
+                //TODO stard thread for sleep, or concurency. 
+                //TODO actiate pump after solenoids
+                //TODO validate pins and test
             }
         }
     }
@@ -95,9 +104,9 @@ impl System {
 fn main() {
     let mut system = System::init(vec![
         Device::new(14, "Valve 1".to_string(),  Duration::seconds(2), Duration::seconds(1), vec![Plant::new(1, "Plant 1".to_string())]),
-        Device::new(17, "Valve 2".to_string(), Duration::seconds(3),Duration::seconds(1), vec![Plant::new(2, "Plant 2".to_string())]),
-        Device::new(18, "Pump".to_string(), Duration::seconds(7),Duration::seconds(1), vec![Plant::new(3, "Plant 3".to_string())]),
-    ]);
+        Device::new(18, "Pump".to_string(), Duration::seconds(7),Duration::seconds(1), vec![Plant::new(3, "Plant 2".to_string())]),
+    ], Pump::new(17));
+
     system.activate();
 }
 
