@@ -7,11 +7,10 @@ GPIO.setmode(GPIO.BCM)
 #removing the warings 
 GPIO.setwarnings(False)
 #creating a list (array) with the number of GPIO's that we use 
-pins = [14,16] 
+pins = [14,16, 20] 
 
 #setting the mode for all pins so all will be switched on 
 GPIO.setup(pins, GPIO.OUT)
-
 
 for pin in pins:
     GPIO.output(pin,  0)
