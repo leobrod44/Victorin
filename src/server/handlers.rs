@@ -1,14 +1,21 @@
+use crate::config::config::PlantConfig;
 use crate::system::system::System;
-use crate::{config::config::PlantConfig, plants::plant::Plant};
 use std::convert::Infallible;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use warp::http::StatusCode;
 
 pub async fn create_plant(
     plant: PlantConfig,
     system: Arc<Mutex<System>>,
 ) -> Result<impl warp::Reply, Infallible> {
-    print!("Creating plant: {:?}", plant);
+    println!("Creating plant...");
+    let mut system = system.lock().await;
+    println!("Lock acquired...");
+    let Some(device) = system.plant_devices.get(&plant.id).cloned() else {
+        return Ok(StatusCode::NOT_FOUND);
+    };
+    system.register_device(device);
     Ok(StatusCode::CREATED)
 }
 
@@ -16,10 +23,11 @@ pub async fn water_plant(
     plant: PlantConfig,
     system: Arc<Mutex<System>>,
 ) -> Result<impl warp::Reply, Infallible> {
-    let mut system = system.lock().unwrap();
+    let mut system = system.lock().await;
     let Some(device) = system.plant_devices.get(&plant.id).cloned() else {
         return Ok(StatusCode::NOT_FOUND);
     };
+    println!("device: {:?}", device.pin);
     system.register_device(device);
     Ok(StatusCode::OK)
 }

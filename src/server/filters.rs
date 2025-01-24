@@ -1,12 +1,12 @@
 use crate::{config::config::PlantConfig, server::handlers, system::system::System};
-use std::sync::{Arc, Mutex};
-use warp::Filter;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use warp::{filters::method::post, Filter};
 
 /// POST new plant
 pub fn create_plant(
     system: Arc<Mutex<System>>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    println!("Creating plant...");
     warp::path!("create_plant")
         .and(warp::post())
         .and(json_body())
@@ -18,7 +18,6 @@ pub fn create_plant(
 pub fn water_plant(
     system: Arc<Mutex<System>>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    println!("Watering plant...");
     warp::path!("water_plant")
         .and(warp::post())
         .and(json_body())
