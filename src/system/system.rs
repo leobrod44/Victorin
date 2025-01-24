@@ -1,10 +1,6 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
-
 use chrono::Utc;
+use std::{collections::HashMap, sync::Arc, time::Duration};
+use tokio::sync::Mutex;
 use tokio::{task, time::sleep};
 
 use crate::config::config::Config;
@@ -48,18 +44,22 @@ impl System {
         }
     }
 
-    pub async fn run(&self) {
-        let start = Utc::now();
-        let tick = self.tick;
-        let system: Arc<Mutex<System>> = Arc::new(Mutex::new(self.clone()));
+    pub async fn run(system: Arc<Mutex<Self>>) {
+        let system_guard = system.lock().await;
+        let tick = system_guard.tick;
+        drop(system_guard);
+
         loop {
-            check_devices(&system);
+            check_devices(Arc::clone(&system)).await;
             let _ = sleep(tick).await;
         }
     }
 
     pub fn register_device(&mut self, device: Device) {
-        self.devices.push(device);
+        self.to_trigger.push(device);
+    }
+    pub fn deregister_device(&mut self, device: &Device) {
+        self.to_trigger.retain(|d| d.pin != device.pin);
     }
 
     fn open_device(&self, device: &Device) {
@@ -83,60 +83,65 @@ impl System {
     }
 }
 
-pub fn check_devices(system: &Arc<Mutex<System>>) {
+pub async fn check_devices(system: Arc<Mutex<System>>) {
     let now = Utc::now();
+    let mut system_guard = system.lock().await;
+    let to_notify: Vec<usize> = system_guard
+        .devices
+        .iter()
+        .enumerate()
+        .filter_map(|(index, device)| {
+            if now.signed_duration_since(device.last_trigger) >= device.cycle && !device.status {
+                Some(index)
+            } else {
+                None
+            }
+        })
+        .collect();
 
-    let to_trigger: Vec<usize> = {
-        let system = system.lock().unwrap();
-        system
-            .devices
-            .iter()
-            .enumerate()
-            .filter_map(|(index, device)| {
-                if now.signed_duration_since(device.last_trigger) >= device.cycle && !device.status
-                {
-                    Some(index)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    };
+    let to_trigger: Vec<_> = system_guard
+        .to_trigger
+        .iter()
+        .map(|device| Arc::new(Mutex::new(device.clone())))
+        .collect();
 
     if !to_trigger.is_empty() {
-        {
-            let mut system = system.lock().unwrap();
-            for &index in &to_trigger {
-                system.open_device(&system.devices[index]);
-            }
-            system.activate_pump();
+        //open devices
+        for device in &to_trigger {
+            let device_guard = device.lock().await;
+            system_guard.open_device(&*device_guard);
         }
 
-        // Start device deactivation timers
-        for index in to_trigger {
-            let system_ref: Arc<Mutex<System>> = Arc::clone(&system);
-            task::spawn(async move {
-                {
-                    let mut system = system_ref.lock().unwrap();
-                    system.open_device_count += 1;
-                    system.devices[index].status = true;
-                }
+        //open pump
+        system_guard.activate_pump();
 
-                let duration_secs = {
-                    let system = system_ref.lock().unwrap();
-                    system.devices[index].duration.num_milliseconds() as u64
+        //start device deactivation timers
+        for device in to_trigger {
+            println!("Device to trigger: {:?}", device.lock().await.pin);
+            let system_clone = Arc::clone(&system);
+
+            task::spawn(async move {
+                let duration = {
+                    let mut device_guard = device.lock().await;
+                    let mut system_guard = system_clone.lock().await;
+                    system_guard.deregister_device(&*device_guard);
+                    device_guard.status = true;
+                    system_guard.open_device_count += 1;
+                    Duration::from_millis(device_guard.duration.num_milliseconds() as u64)
                 };
-                tokio::time::sleep(Duration::from_millis(duration_secs)).await;
+
+                tokio::time::sleep(duration).await;
+
                 {
-                    let mut system = system_ref.lock().unwrap();
-                    system.open_device_count -= 1;
-                    if system.open_device_count == 0 {
-                        system.deactivate_pump();
-                        println!("")
+                    let mut device_guard = device.lock().await;
+                    let mut system_guard = system_clone.lock().await;
+                    system_guard.open_device_count -= 1;
+                    if system_guard.open_device_count == 0 {
+                        system_guard.deactivate_pump();
                     }
-                    system.close_device(&system.devices[index]);
-                    system.devices[index].last_trigger = Utc::now();
-                    system.devices[index].status = false;
+                    system_guard.close_device(&*device_guard);
+                    device_guard.last_trigger = Utc::now();
+                    device_guard.status = false;
                 }
             });
         }

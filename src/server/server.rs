@@ -1,5 +1,6 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
+use tokio::sync::Mutex;
 use warp::Filter;
 
 use crate::system::system::System;
@@ -15,6 +16,7 @@ impl Server {
         Server { system }
     }
     pub async fn run(&self) {
+        println!("Starting server...");
         let create_plant = filters::create_plant(Arc::clone(&self.system));
         let water_plant = filters::water_plant(Arc::clone(&self.system));
 
