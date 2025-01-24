@@ -2,7 +2,10 @@ import CoreData
 import SwiftUI
 
 struct ContentView: View {
-    @State private var plants: [Plant] = []
+    @State private var plants: [Plant] = [
+        Plant(device: 1, name: "Pothos", cycle: 7, duration: 10),
+        Plant(device: 2, name: "Fern", cycle: 5, duration: 5)
+    ]
     @State private var isEditing = false
     @State private var isAdding = false // To track if we are adding a new plant
     @State private var selectedPlantIndex: Int? = nil
@@ -64,18 +67,13 @@ struct ContentView: View {
         }
     }
 
-    private func addPlant() {
-        // Adding the new plant to the list
-        let newPlant = Plant(name: newPlantName, cycle: newPlantCycle, duration: newPlantDuration)
-        plants.append(newPlant)
-        clearAddPlantFields() // Reset form fields after adding
-    }
-
     private func clearAddPlantFields() {
         newPlantName = ""
         newPlantCycle = 1
         newPlantDuration = 5
     }
+    
+    
 }
 
 
@@ -83,11 +81,12 @@ struct PlantView: View {
     @Binding var plant: Plant
     var onEdit: () -> Void // Closure to handle edit
 
+    @State private var isWatering = false // Tracks watering state for the animation
+
     var body: some View {
         GeometryReader { geometry in
             VStack {
                 HStack {
-                    // Plant Name at the Top
                     Text(plant.name)
                         .font(.headline)
                         .padding(.top, 5)
@@ -95,13 +94,12 @@ struct PlantView: View {
 
                     Spacer()
 
-                    // Edit Button (3 Dots) at the Right of the Name
                     Button(action: onEdit) {
                         Image(systemName: "ellipsis")
                             .foregroundColor(.white)
                             .font(.title2)
                             .padding(10)
-                            .background(Color.gray.opacity(0.4)) // Lighter alpha
+                            .background(Color.gray.opacity(0.4))
                             .clipShape(Circle())
                     }
                     .padding(.top, 4)
@@ -114,7 +112,7 @@ struct PlantView: View {
                         Image("plant")
                             .resizable()
                             .scaledToFit()
-                            .frame(width: geometry.size.width * 0.55, height: geometry.size.height * 0.55) // Use screen percentage
+                            .frame(width: geometry.size.width * 0.55, height: geometry.size.height * 0.55)
                             .background(Color.white)
                             .cornerRadius(10)
                         Spacer()
@@ -124,18 +122,24 @@ struct PlantView: View {
                 Spacer()
 
                 HStack {
-                    // Humidity Circle
                     Circle()
                         .fill(Color.cyan)
                         .frame(width: 20, height: 20)
 
-                    // Water Button
-                    Button("Water") {
-                        // Trigger watering
+                    Button(action: {
+                        triggerWatering(plant: plant)
+                    }) {
+                        if isWatering {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle())
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            Text("Water")
+                                .frame(maxWidth: .infinity)
+                        }
                     }
-                    .frame(maxWidth: .infinity)
                     .padding(.vertical, 5)
-                    .background(Color.blue)
+                    .background(isWatering ? Color.gray : Color.blue)
                     .foregroundColor(.white)
                     .cornerRadius(10)
                 }
@@ -149,21 +153,86 @@ struct PlantView: View {
         }
         .frame(minHeight: 250)
     }
+
+    func triggerWatering(plant: Plant) {
+        
+        
+
+        guard let url = URL(string: "http://127.0.0.1:3030/water_plant") else {
+            print("Invalid URL")
+            isWatering = false
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let body: [String: Any] = [
+            "id": plant.device,
+            "name": plant.name
+        ]
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
+        } catch {
+            print("Failed to encode JSON")
+            isWatering = false
+            return
+        }
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("Error: \(error.localizedDescription)")
+                } else if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                    isWatering = true // Start loading animation
+                    print("Watering triggered successfully!")
+
+                    // Simulate waiting for the Raspberry Pi response
+                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(plant.duration)) {
+                        isWatering = false // End loading animation
+                    }
+                } else {
+                    print("Failed to water plant.")
+                    isWatering = false
+                }
+            }
+        }.resume()
+    }
 }
+
+
 
 struct AddPlantForm: View {
     @Binding var isAdding: Bool
-    @Binding var plants: [Plant] // Reference to the plants array
+    @Binding var plants: [Plant]
 
     @State private var newPlantName: String = "Plant"
-    @State private var newPlantCycle: Int = 7 // Default to 7 days
-    @State private var newPlantDuration: Int = 3600 // Default to 3600 seconds (1 hour)
+    @State private var newDevice: String = ""
+    @State private var parsedDevice: Int? = nil
+    @State private var newPlantCycle: Int = 7
+    @State private var newPlantDuration: Int = 10
 
     var body: some View {
         NavigationView {
             Form {
                 Section(header: Text("New Plant Details")) {
-                    TextField("Name", text: $newPlantName)
+                    TextField("Name:", text: $newPlantName)
+                    
+                    TextField("Device:", text: Binding(
+                         get: {
+                             newDevice
+                         },
+                         set: { newValue in
+                             newDevice = newValue
+                             if let intValue = Int(newValue) {
+                                 parsedDevice = intValue
+                             } else {
+                                 parsedDevice = nil
+                             }
+                         }
+                     ))
 
                     // Stepper for Watering Cycle (in days)
                     Stepper("Watering Cycle: \(newPlantCycle) days", value: $newPlantCycle, in: 1...60)
@@ -178,9 +247,14 @@ struct AddPlantForm: View {
                 isAdding = false // Close the add form
             }, trailing: Button("Save") {
                 // Add the plant when saving
-                let newPlant = Plant(name: newPlantName, cycle: newPlantCycle, duration: newPlantDuration)
+                guard let device = parsedDevice,
+                      let parsedDevice = parsedDevice else {
+                    print("Failed to unwrap optional values")
+                    return
+                }
+                let newPlant = Plant(device: device, name: newPlantName, cycle: newPlantCycle, duration: newPlantDuration)
                 plants.append(newPlant)
-                isAdding = false // Close the form
+                isAdding = false
             })
             .navigationBarTitle("Add New Plant", displayMode: .inline)
         }
@@ -188,29 +262,13 @@ struct AddPlantForm: View {
 }
 
 
-//struct EditPlantForm: View {
-//    @Binding var plant: Plant
-//
-//    var body: some View {
-//        NavigationView {
-//            Form {
-//                Section(header: Text("Edit Plant")) {
-//                    TextField("Name", text: $plant.name)
-//                    Stepper("Watering Cycle: \(plant.cycle)", value: $plant.cycle, in: 1...7)
-//                    Stepper("Duration: \(plant.duration) hours", value: $plant.duration, in: 1...24)
-//                }
-//            }
-//            .navigationBarItems(trailing: Button("Save") {
-//                // No need to manually assign values here, as we are binding directly to the plant
-//            })
-//            .navigationBarTitle("Edit Plant", displayMode: .inline)
-//        }
-//    }
-//}
 
 struct Plant: Identifiable {
     var id = UUID()
+    var device: Int
     var name: String
     var cycle: Int // In days
     var duration: Int // In seconds
+    var isWatering: Bool = false // New property for loading state
 }
+
