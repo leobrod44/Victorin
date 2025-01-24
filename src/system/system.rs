@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -6,23 +7,44 @@ use std::{
 use chrono::Utc;
 use tokio::{task, time::sleep};
 
+use crate::config::config::Config;
+
 use super::device::{Device, Pump};
 
 #[derive(Clone)]
 pub struct System {
-    devices: Vec<Device>,
-    pump: Pump,
-    tick: Duration,
-    open_device_count: u8,
+    pub devices: Vec<Device>,
+    pub pump: Pump,
+    pub tick: Duration,
+    pub open_device_count: u8,
+    pub plant_devices: HashMap<i32, Device>,
+    to_trigger: Vec<Device>,
 }
 
 impl System {
-    pub fn init(devices: Vec<Device>, pump: Pump, tick: Duration) -> System {
+    pub fn init(config: Config) -> System {
+        let devices: Vec<Device> = config
+            .devices
+            .iter()
+            .map(|device_config| Device::from(device_config))
+            .collect();
+        let plant_devices: HashMap<i32, Device> = devices
+            .iter()
+            .flat_map(|device| {
+                device
+                    .plants
+                    .iter()
+                    .map(move |plant| (plant.id, device.clone()))
+            })
+            .collect();
+
         System {
-            devices,
-            pump,
-            tick,
+            devices: devices,
+            pump: Pump::new(config.pump),
+            tick: Duration::from_millis(config.tick),
             open_device_count: 0,
+            plant_devices,
+            to_trigger: vec![],
         }
     }
 
@@ -33,11 +55,11 @@ impl System {
         loop {
             check_devices(&system);
             let _ = sleep(tick).await;
-            // println!(
-            //     "Tick {}",
-            //     Utc::now().signed_duration_since(start).num_seconds()
-            // );
         }
+    }
+
+    pub fn register_device(&mut self, device: Device) {
+        self.devices.push(device);
     }
 
     fn open_device(&self, device: &Device) {

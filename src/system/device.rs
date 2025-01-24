@@ -1,7 +1,6 @@
+use crate::{config::config::DeviceConfig, plants::plant::Plant};
 use chrono::{DateTime, Duration, Utc};
 use rppal::gpio::Gpio;
-
-use crate::plants::plant::Plant;
 
 #[derive(Debug, Clone)]
 pub struct Device {
@@ -12,7 +11,21 @@ pub struct Device {
     pub(crate) duration: Duration,
     pub(crate) last_trigger: DateTime<Utc>,
     pub(crate) status: bool,
-    pub(crate) target: Vec<Plant>,
+    pub(crate) plants: Vec<Plant>,
+}
+
+impl From<&DeviceConfig> for Device {
+    fn from(config: &DeviceConfig) -> Self {
+        let cycle = Duration::seconds(config.cycle_sec);
+        let duration = Duration::milliseconds(config.duration_ms);
+        let target = config
+            .plants
+            .iter()
+            .map(|plant_config| Plant::from(plant_config))
+            .collect();
+
+        Device::new(config.pin, config.name.clone(), cycle, duration, target)
+    }
 }
 
 impl Device {
@@ -31,7 +44,7 @@ impl Device {
             duration,
             status: false,
             last_trigger: Utc::now(),
-            target,
+            plants: target,
         }
     }
     pub(crate) fn activate(&self) {

@@ -1,31 +1,23 @@
-use chrono::{DateTime, Duration, Utc};
-use rppal::gpio::Gpio;
-use std::thread::sleep;
-use victorin::plants::plant::Plant;
-use victorin::system::device::{Device, Pump};
-use victorin::system::system::System;
+use std::sync::{Arc, Mutex};
+
+use victorin::{server::server::Server, system::system::System};
 
 #[tokio::main]
 async fn main() {
-    let system = System::init(
-        vec![
-            Device::new(
-                14,
-                "Valve 1".to_string(),
-                Duration::seconds(2),
-                Duration::milliseconds(1000),
-                vec![Plant::new(1, "Plant 1".to_string())],
-            ),
-            Device::new(
-                15,
-                "Valve 2".to_string(),
-                Duration::seconds(10),
-                Duration::milliseconds(8000),
-                vec![Plant::new(3, "Plant 2".to_string())],
-            ),
-        ],
-        Pump::new(17),
-        std::time::Duration::from_millis(250),
-    );
-    system.run().await;
+    let config = victorin::config::config::Config::init("src/config/system.yaml").unwrap();
+
+    let system: Arc<Mutex<System>> = Arc::new(Mutex::new(System::init(config)));
+
+    let server = Server::new(system);
+
+    let server_task = tokio::spawn(async move {
+        server.run().await;
+    });
+
+    let system_task = tokio::spawn(async move {
+        // system.run().await;
+    });
+
+    // Wait for both tasks to finish
+    let _ = tokio::try_join!(server_task, system_task);
 }
