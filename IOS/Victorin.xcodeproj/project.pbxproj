@@ -6,13 +6,33 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		E8F8B85B2D472DB70072C4A0 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = E8F8B85A2D472DB70072C4A0 /* FirebaseAnalytics */; };
+		E8F8B85D2D472DB70072C4A0 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = E8F8B85C2D472DB70072C4A0 /* FirebaseAuth */; };
+		E8F8B85F2D472DB70072C4A0 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = E8F8B85E2D472DB70072C4A0 /* FirebaseCore */; };
+		E8F8B8612D472DB70072C4A0 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = E8F8B8602D472DB70072C4A0 /* FirebaseMessaging */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		E86F609A2D430F5E002F64AE /* Victorin.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Victorin.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E87F93202D47423200B5152B /* Exceptions for "Victorin" folder in "Victorin" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E86F60992D430F5E002F64AE /* Victorin */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		E86F609C2D430F5E002F64AE /* Victorin */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E87F93202D47423200B5152B /* Exceptions for "Victorin" folder in "Victorin" target */,
+			);
 			path = Victorin;
 			sourceTree = "<group>";
 		};
@@ -23,6 +43,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E8F8B8612D472DB70072C4A0 /* FirebaseMessaging in Frameworks */,
+				E8F8B85B2D472DB70072C4A0 /* FirebaseAnalytics in Frameworks */,
+				E8F8B85F2D472DB70072C4A0 /* FirebaseCore in Frameworks */,
+				E8F8B85D2D472DB70072C4A0 /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +89,10 @@
 			);
 			name = Victorin;
 			packageProductDependencies = (
+				E8F8B85A2D472DB70072C4A0 /* FirebaseAnalytics */,
+				E8F8B85C2D472DB70072C4A0 /* FirebaseAuth */,
+				E8F8B85E2D472DB70072C4A0 /* FirebaseCore */,
+				E8F8B8602D472DB70072C4A0 /* FirebaseMessaging */,
 			);
 			productName = Victorin;
 			productReference = E86F609A2D430F5E002F64AE /* Victorin.app */;
@@ -94,6 +122,9 @@
 			);
 			mainGroup = E86F60912D430F5E002F64AE;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				E8F8B8552D4728D30072C4A0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = E86F609B2D430F5E002F64AE /* Products */;
 			projectDirPath = "";
@@ -248,8 +279,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Victorin/Preview Content\"";
+				DEVELOPMENT_TEAM = KGT79U55WT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Victorin/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -286,8 +319,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Victorin/Preview Content\"";
+				DEVELOPMENT_TEAM = KGT79U55WT;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Victorin/Info.plist;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -337,6 +372,40 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		E8F8B8552D4728D30072C4A0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.7.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		E8F8B85A2D472DB70072C4A0 /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E8F8B8552D4728D30072C4A0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		E8F8B85C2D472DB70072C4A0 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E8F8B8552D4728D30072C4A0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		E8F8B85E2D472DB70072C4A0 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E8F8B8552D4728D30072C4A0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		E8F8B8602D472DB70072C4A0 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E8F8B8552D4728D30072C4A0 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = E86F60922D430F5E002F64AE /* Project object */;
 }

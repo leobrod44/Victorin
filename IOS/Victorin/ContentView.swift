@@ -269,6 +269,8 @@ struct Plant: Identifiable {
     var name: String
     var cycle: Int // In days
     var duration: Int // In seconds
+    var humidity: Double = 0.0 // New property for humidity
     var isWatering: Bool = false // New property for loading state
 }
+
 
