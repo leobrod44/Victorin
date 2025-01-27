@@ -6,9 +6,9 @@
 //
 
 import SwiftUI
-
 @main
 struct VictorinApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     let persistenceController = PersistenceController.shared
 
     var body: some Scene {
