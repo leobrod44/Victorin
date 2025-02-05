@@ -7,6 +7,31 @@ use crate::config::config::Config;
 
 use super::device::{Device, Pump};
 
+use reqwest::Client;
+
+pub struct HttpClient {
+    client: reqwest::Client,
+    ip_address: String,
+}
+
+impl HttpClient {
+    pub fn new(ip_address: String) -> HttpClient {
+        let client = reqwest::Client::new();
+        HttpClient { client, ip_address }
+    }
+
+    pub async fn send_request(
+        &self,
+        path: &str,
+        body: serde_json::Value,
+    ) -> Result<String, reqwest::Error> {
+        let client = reqwest::Client::new();
+        let url = format!("http://{}/{}", self.ip_address, path);
+        let response = self.client.post(&url).json(&body).send().await?;
+        response.text().await
+    }
+}
+
 #[derive(Clone)]
 pub struct System {
     pub devices: Vec<Device>,
@@ -144,6 +169,34 @@ pub async fn check_devices(system: Arc<Mutex<System>>) {
                     device_guard.status = false;
                 }
             });
+        }
+    }
+    async fn request(request_name: String) -> Result<impl warp::Reply, warp::Rejection> {
+        let client = Client::new();
+
+        let response = client
+            .post("https://jsonplaceholder.typicode.com/posts")
+            .json(&json!({
+                "title": "foo",
+                "body": "bar",
+                "userId": 1
+            }))
+            .send()
+            .await;
+
+        match response {
+            Ok(resp) => {
+                // Get the response body as text
+                let body = resp
+                    .text()
+                    .await
+                    .unwrap_or_else(|_| "Failed to get response".to_string());
+                Ok(warp::reply::json(&body))
+            }
+            Err(err) => {
+                eprintln!("HTTP Request failed: {:?}", err);
+                Err(warp::reject::custom(err))
+            }
         }
     }
 }

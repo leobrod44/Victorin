@@ -16,7 +16,7 @@ async fn main() {
     });
 
     let server_task = tokio::spawn(async move {
-        server.run().await;
+        server.run().await;     
     });
 
     // Wait for both tasks to finish

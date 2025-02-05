@@ -19,8 +19,12 @@ impl Server {
         println!("Starting server...");
         let create_plant = filters::create_plant(Arc::clone(&self.system));
         let water_plant = filters::water_plant(Arc::clone(&self.system));
+        let notify_humidity_plant = filters::notify_humidity_plant();
 
-        let routes = create_plant.or(water_plant).with(warp::log("plant"));
+        let routes = create_plant
+            .or(water_plant)
+            .or(notify_humidity_plant)
+            .with(warp::log("plant"));
 
         warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     }
