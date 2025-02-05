@@ -8,30 +8,6 @@ use crate::config::config::Config;
 use super::device::{Device, Pump};
 
 use reqwest::Client;
-
-pub struct HttpClient {
-    client: reqwest::Client,
-    ip_address: String,
-}
-
-impl HttpClient {
-    pub fn new(ip_address: String) -> HttpClient {
-        let client = reqwest::Client::new();
-        HttpClient { client, ip_address }
-    }
-
-    pub async fn send_request(
-        &self,
-        path: &str,
-        body: serde_json::Value,
-    ) -> Result<String, reqwest::Error> {
-        let client = reqwest::Client::new();
-        let url = format!("http://{}/{}", self.ip_address, path);
-        let response = self.client.post(&url).json(&body).send().await?;
-        response.text().await
-    }
-}
-
 #[derive(Clone)]
 pub struct System {
     pub devices: Vec<Device>,
@@ -105,6 +81,17 @@ impl System {
         if self.pump.status {
             self.pump.deactivate();
         }
+    }
+
+    async fn activate_remote_valve(&self, device: &Device) -> Result<String, reqwest::Error> {
+        let client = reqwest::Client::new();
+        let url = format!("http://{}/{}", device.ip, "activate");
+        let body = json!({
+            "device": device.pin,
+            "status": true
+        });
+        let response = self.client.post(&url).json(&body).send().await?;
+        response.text().await
     }
 }
 

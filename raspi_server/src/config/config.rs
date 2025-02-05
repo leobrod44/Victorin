@@ -11,6 +11,7 @@ pub struct Config {
 #[derive(Deserialize, Debug)]
 pub struct DeviceConfig {
     pub name: String,
+    pub ip: String,
     pub pin: u8,
     pub cycle_sec: i64,
     pub duration_ms: i64,
