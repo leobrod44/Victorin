@@ -1,21 +1,22 @@
 use chrono::Utc;
+use serde_json::json;
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::sync::Mutex;
+use tokio::sync::{oneshot, Mutex};
 use tokio::{task, time::sleep};
 
 use crate::config::config::Config;
+use reqwest::Error;
 
 use super::device::{Device, Pump};
 
-use reqwest::Client;
-#[derive(Clone)]
 pub struct System {
     pub devices: Vec<Device>,
     pub pump: Pump,
     pub tick: Duration,
     pub open_device_count: u8,
-    pub plant_devices: HashMap<i32, Device>,
+    pub plant_devices: HashMap<u32, Device>,
     to_trigger: Vec<Device>,
+    cycle_listeners: HashMap<u32, oneshot::Sender<()>>,
 }
 
 impl System {
@@ -25,7 +26,7 @@ impl System {
             .iter()
             .map(|device_config| Device::from(device_config))
             .collect();
-        let plant_devices: HashMap<i32, Device> = devices
+        let plant_devices: HashMap<u32, Device> = devices
             .iter()
             .flat_map(|device| {
                 device
@@ -42,6 +43,7 @@ impl System {
             open_device_count: 0,
             plant_devices,
             to_trigger: vec![],
+            cycle_listeners: HashMap::new(),
         }
     }
 
@@ -83,15 +85,37 @@ impl System {
         }
     }
 
-    async fn activate_remote_valve(&self, device: &Device) -> Result<String, reqwest::Error> {
+    pub async fn activate_remote_valve(&self, device: &Device) -> Result<String, Error> {
         let client = reqwest::Client::new();
-        let url = format!("http://{}/{}", device.ip, "activate");
+        let url = format!("http://{}:8080/activate", device.ip); // Fixed the URL format
         let body = json!({
             "device": device.pin,
-            "status": true
+            "duration": device.cycle.num_seconds()
         });
-        let response = self.client.post(&url).json(&body).send().await?;
-        response.text().await
+
+        let response = client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .body(body.to_string()) // Convert the JSON value to a string
+            .send()
+            .await?; // Use `?` to propagate errors
+
+        let response_text = response.text().await?; // Use `?` to propagate errors
+        Ok(response_text)
+    }
+
+    pub fn register_cycle_complete_listener(
+        &mut self,
+        device_id: u32,
+        sender: oneshot::Sender<()>,
+    ) {
+        self.cycle_listeners.insert(device_id, sender);
+    }
+
+    pub fn complete_cycle(&mut self, device_id: u32) {
+        if let Some(sender) = self.cycle_listeners.remove(&device_id) {
+            let _ = sender.send(());
+        }
     }
 }
 
@@ -156,34 +180,6 @@ pub async fn check_devices(system: Arc<Mutex<System>>) {
                     device_guard.status = false;
                 }
             });
-        }
-    }
-    async fn request(request_name: String) -> Result<impl warp::Reply, warp::Rejection> {
-        let client = Client::new();
-
-        let response = client
-            .post("https://jsonplaceholder.typicode.com/posts")
-            .json(&json!({
-                "title": "foo",
-                "body": "bar",
-                "userId": 1
-            }))
-            .send()
-            .await;
-
-        match response {
-            Ok(resp) => {
-                // Get the response body as text
-                let body = resp
-                    .text()
-                    .await
-                    .unwrap_or_else(|_| "Failed to get response".to_string());
-                Ok(warp::reply::json(&body))
-            }
-            Err(err) => {
-                eprintln!("HTTP Request failed: {:?}", err);
-                Err(warp::reject::custom(err))
-            }
         }
     }
 }

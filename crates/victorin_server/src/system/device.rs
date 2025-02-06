@@ -4,6 +4,8 @@ use rppal::gpio::Gpio;
 
 #[derive(Debug, Clone)]
 pub struct Device {
+    pub(crate) id: u32,
+    pub(crate) ip: String,
     pub(crate) pin: u8,
     pub(crate) gpio: Gpio,
     pub(crate) name: String,
@@ -24,12 +26,22 @@ impl From<&DeviceConfig> for Device {
             .map(|plant_config| Plant::from(plant_config))
             .collect();
 
-        Device::new(config.pin, config.name.clone(), cycle, duration, target)
+        Device::new(
+            config.id,
+            config.ip.clone(),
+            config.pin,
+            config.name.clone(),
+            cycle,
+            duration,
+            target,
+        )
     }
 }
 
 impl Device {
     pub fn new(
+        id: u32,
+        ip: String,
         pin: u8,
         name: String,
         cycle: Duration,
@@ -37,6 +49,8 @@ impl Device {
         target: Vec<Plant>,
     ) -> Device {
         Device {
+            id,
+            ip,
             pin,
             gpio: Gpio::new().expect("Failed to initialize GPIO"),
             name,

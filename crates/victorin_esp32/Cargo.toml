@@ -1,5 +1,5 @@
 [package]
-name = "victorin"
+name = "victorin_esp32"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,5 +13,3 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 warp = "0.3.7"
 reqwest = "0.12.12"
-
-

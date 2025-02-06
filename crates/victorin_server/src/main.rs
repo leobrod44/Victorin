@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
 use tokio::sync::Mutex;
-use victorin::{server::server::Server, system::system::System};
+use victorin_server::{server::server::Server, system::system::System};
 
 #[tokio::main]
 async fn main() {
-    let config = victorin::config::config::Config::init("src/config/system.yaml").unwrap();
+    let config = victorin_server::config::config::Config::init("src/config/system.yaml").unwrap();
 
     let system: Arc<Mutex<System>> = Arc::new(Mutex::new(System::init(config)));
 
@@ -16,7 +16,7 @@ async fn main() {
     });
 
     let server_task = tokio::spawn(async move {
-        server.run().await;     
+        server.run().await;
     });
 
     // Wait for both tasks to finish

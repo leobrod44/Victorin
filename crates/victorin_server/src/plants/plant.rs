@@ -2,7 +2,7 @@ use crate::config::config::PlantConfig;
 
 #[derive(Debug, Clone)]
 pub struct Plant {
-    pub(crate) id: i32,
+    pub(crate) id: u32,
     pub(crate) name: String,
     pub(crate) humidity: f32,
     pub(crate) temperature: f32,
@@ -20,7 +20,7 @@ impl From<&PlantConfig> for Plant {
 }
 
 impl Plant {
-    pub fn new(id: i32, name: String) -> Plant {
+    pub fn new(id: u32, name: String) -> Plant {
         Plant {
             id,
             name,

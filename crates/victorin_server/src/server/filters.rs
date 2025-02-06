@@ -1,12 +1,12 @@
-use crate::{config::config::PlantConfig, server::handlers, system::system::System};
+use crate::{server::handlers, system::system::System};
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use warp::{filters::method::post, Filter};
+use warp::Filter;
 
 #[derive(serde::Deserialize)]
 pub struct PlantHumidity {
-    pub id: i32,
+    pub id: u32,
     pub humidity: f32,
 }
 
@@ -32,13 +32,34 @@ pub fn water_plant(
         .and_then(handlers::water_plant)
 }
 
-/// POST notify plant humidity
-pub fn notify_humidity_plant(
+/// POST activate device
+pub fn activate_device(
+    system: Arc<Mutex<System>>,
 ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("notify_humidity_plant")
+    warp::path!("activate_device")
         .and(warp::post())
         .and(json_body())
-        .and_then(handlers::notify_humidity_plant)
+        .and(with_system(system))
+        .and_then(handlers::activate_device)
+}
+/// POST activate device
+pub fn cycle_complete(
+    system: Arc<Mutex<System>>,
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("cycle_complete")
+        .and(warp::post())
+        .and(json_body())
+        .and(with_system(system))
+        .and_then(handlers::activate_device)
+}
+
+/// POST notify plant humidity
+pub fn humidity_plant(
+) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("humidity_plant")
+        .and(warp::post())
+        .and(json_body())
+        .and_then(handlers::humidity_plant)
 }
 
 fn with_system(
