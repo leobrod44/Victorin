@@ -176,3 +176,10 @@ cython_debug/
 *.embuild/
 
 **/.embuild/
+
+
+*target/
+*.jpg
+*.png
+*.jpeg
+*/chrome/
