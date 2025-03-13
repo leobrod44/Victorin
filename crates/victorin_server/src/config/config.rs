@@ -10,7 +10,7 @@ pub struct Config {
 
 #[derive(Deserialize, Debug)]
 pub struct DeviceConfig {
-    pub id: u32,
+    pub device_id: u32,
     pub ip: String,
     pub name: String,
     pub pin: u8,

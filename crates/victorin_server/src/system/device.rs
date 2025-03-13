@@ -27,7 +27,7 @@ impl From<&DeviceConfig> for Device {
             .collect();
 
         Device::new(
-            config.id,
+            config.device_id,
             config.ip.clone(),
             config.pin,
             config.name.clone(),

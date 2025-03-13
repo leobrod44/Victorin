@@ -32,7 +32,7 @@ impl System {
                 device
                     .plants
                     .iter()
-                    .map(move |plant| (plant.id, device.clone()))
+                    .map(move |plant| (plant.valve_id, device.clone()))
             })
             .collect();
 

@@ -12,13 +12,13 @@ pub async fn activate_device(
     system: Arc<Mutex<System>>,
 ) -> Result<impl warp::Reply, Infallible> {
     let mut system = system.lock().await;
-    let Some(device) = system.plant_devices.get(&device.id).cloned() else {
+    let Some(device) = system.plant_devices.get(&device.device_id).cloned() else {
         return Ok(StatusCode::NOT_FOUND);
     };
     let (tx, rx) = oneshot::channel();
 
     system.register_cycle_complete_listener(device.id, tx);
-    system.activate_remote_valve(&device).await;
+    let _ = system.activate_remote_valve(&device).await;
 
     println!("activated_device {}", device.id);
 
@@ -46,7 +46,7 @@ pub async fn cycle_complete(
     system: Arc<Mutex<System>>,
 ) -> Result<impl warp::Reply, Infallible> {
     let mut system = system.lock().await;
-    system.complete_cycle(device.id);
+    system.complete_cycle(device.device_id);
     Ok(StatusCode::OK)
 }
 
