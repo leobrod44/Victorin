@@ -1,6 +1,5 @@
 [workspace]
 members = [
-    "crates/victorin_server",
-    "crates/victorin_esp32"
+    "crates/victorin_server"
 ]
 

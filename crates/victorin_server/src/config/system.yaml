@@ -18,6 +18,9 @@ devices:
       - id: 1
         name: "Plant 2"
         
-pump: 17
+pump: 
+  pin: 17
+  ip: 192.168.0.25
+  status: false
 
 tick: 2000

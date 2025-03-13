@@ -1,10 +1,12 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 
+use crate::system::device::Pump;
+
 #[derive(Deserialize, Debug)]
 pub struct Config {
     pub devices: Vec<DeviceConfig>,
-    pub pump: u8,
+    pub pump: Pump,
     pub tick: u64,
 }
 
@@ -17,6 +19,11 @@ pub struct DeviceConfig {
     pub cycle_sec: i64,
     pub duration_ms: i64,
     pub plants: Vec<PlantConfig>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct DeviceRequest {
+    pub device_id: u32,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

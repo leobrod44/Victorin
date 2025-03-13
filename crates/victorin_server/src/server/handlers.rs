@@ -1,5 +1,7 @@
 use crate::config::config::DeviceConfig;
+use crate::config::config::DeviceRequest;
 use crate::config::config::PlantConfig;
+use crate::server::server::Tx;
 use crate::system::system::System;
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -8,9 +10,10 @@ use tokio::sync::Mutex;
 use warp::http::StatusCode;
 
 pub async fn activate_device(
-    device: DeviceConfig,
+    device: DeviceRequest,
     system: Arc<Mutex<System>>,
 ) -> Result<impl warp::Reply, Infallible> {
+    println!("Activating device... {}", device.device_id);
     let mut system = system.lock().await;
     let Some(device) = system.plant_devices.get(&device.device_id).cloned() else {
         return Ok(StatusCode::NOT_FOUND);
@@ -18,7 +21,16 @@ pub async fn activate_device(
     let (tx, rx) = oneshot::channel();
 
     system.register_cycle_complete_listener(device.id, tx);
-    let _ = system.activate_remote_valve(&device).await;
+
+    match system.activate_remote_valve(&device).await {
+        Ok(resp) => {
+            println!("Response: {:?}", resp);
+        }
+        Err(e) => {
+            println!("Failed to activate device {}: {:?}", device.id, e);
+            return Ok(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    }
 
     println!("activated_device {}", device.id);
 
@@ -73,8 +85,16 @@ pub async fn water_plant(
     system.register_device(device);
     Ok(StatusCode::OK)
 }
-pub async fn humidity_plant(plant: PlantHumidity) -> Result<impl warp::Reply, Infallible> {
-    println!("plant humidity: {}, {}", plant.id, plant.humidity);
-    //TODO send plant data to app db
+pub async fn humidity_plant(plant: PlantHumidity, tx: Tx) -> Result<impl warp::Reply, Infallible> {
+    let message = format!(r#"{{"id": {}, "humidity": {}}}"#, plant.id, plant.humidity);
+    println!("Broadcasting message: {}", message);
+
+    match tx.send(message.clone()) {
+        Ok(_) => println!("Message sent successfully!"),
+        Err(e) => println!("Error sending message: {:?}", e),
+    }
+
+    println!("Subscribers after sending: {}", tx.receiver_count());
+
     Ok(StatusCode::OK)
 }

@@ -65,23 +65,59 @@ impl System {
         self.to_trigger.retain(|d| d.pin != device.pin);
     }
 
-    fn open_device(&self, device: &Device) {
-        device.activate();
+    async fn open_device(&mut self, device: &mut Device) -> Result<String, reqwest::Error> {
+        device.activate().await
     }
 
-    fn close_device(&self, device: &Device) {
+    async fn close_device(&mut self, device: &mut Device) {
         device.deactivate();
     }
 
-    fn activate_pump(&mut self) {
+    async fn activate_pump(&mut self) -> Result<String, reqwest::Error> {
         if !self.pump.status {
-            self.pump.activate();
+            let client = reqwest::Client::new();
+            let url = format!("http://{}:8080/activate_pump", self.pump.ip); // Updated URL for pump activation
+            let body = json!({
+                "device_gpio": self.pump.pin
+            });
+
+            let response = client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .body(body.to_string())
+                .send()
+                .await?
+                .error_for_status()?;
+
+            let response_text = response.text().await?;
+            self.pump.status = true;
+            Ok(response_text)
+        } else {
+            Ok("Pump is already active".to_string())
         }
     }
 
-    fn deactivate_pump(&mut self) {
+    async fn deactivate_pump(&mut self) -> Result<String, reqwest::Error> {
         if self.pump.status {
-            self.pump.deactivate();
+            let client = reqwest::Client::new();
+            let url = format!("http://{}:8080/deactivate_pump", self.pump.ip); // Updated URL for pump activation
+            let body = json!({
+                "device_gpio": self.pump.pin
+            });
+
+            let response = client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .body(body.to_string())
+                .send()
+                .await?
+                .error_for_status()?;
+
+            let response_text = response.text().await?;
+            self.pump.status = false;
+            Ok(response_text)
+        } else {
+            Ok("Pump is already inactive".to_string())
         }
     }
 
@@ -101,6 +137,7 @@ impl System {
             .await?; // Use `?` to propagate errors
 
         let response_text = response.text().await?; // Use `?` to propagate errors
+
         Ok(response_text)
     }
 
@@ -119,67 +156,43 @@ impl System {
     }
 }
 
-pub async fn check_devices(system: Arc<Mutex<System>>) {
-    let now = Utc::now();
-    let mut system_guard = system.lock().await;
-    let to_notify: Vec<usize> = system_guard
-        .devices
-        .iter()
-        .enumerate()
-        .filter_map(|(index, device)| {
-            if now.signed_duration_since(device.last_trigger) >= device.cycle && !device.status {
-                Some(index)
-            } else {
-                None
-            }
-        })
-        .collect();
-
+pub async fn check_devices(system: Arc<Mutex<System>>) -> Result<(), Error> {
+    let system_guard = system.lock().await;
     let to_trigger: Vec<_> = system_guard
         .to_trigger
         .iter()
         .map(|device| Arc::new(Mutex::new(device.clone())))
         .collect();
 
+    drop(system_guard);
     if !to_trigger.is_empty() {
-        //open devices
+        // Open devices
         for device in &to_trigger {
-            let device_guard = device.lock().await;
-            system_guard.open_device(&*device_guard);
+            let mut device_guard = device.lock().await;
+            let mut system_guard = system.lock().await;
+            system_guard.open_device(&mut *device_guard).await?;
         }
 
         //open pump
-        system_guard.activate_pump();
-
-        //start device deactivation timers
-        for device in to_trigger {
-            println!("Device to trigger: {:?}", device.lock().await.pin);
-            let system_clone = Arc::clone(&system);
-
-            task::spawn(async move {
-                let duration = {
-                    let mut device_guard = device.lock().await;
-                    let mut system_guard = system_clone.lock().await;
-                    system_guard.deregister_device(&*device_guard);
-                    device_guard.status = true;
-                    system_guard.open_device_count += 1;
-                    Duration::from_millis(device_guard.duration.num_milliseconds() as u64)
-                };
-
-                tokio::time::sleep(duration).await;
-
-                {
-                    let mut device_guard = device.lock().await;
-                    let mut system_guard = system_clone.lock().await;
-                    system_guard.open_device_count -= 1;
-                    if system_guard.open_device_count == 0 {
-                        system_guard.deactivate_pump();
-                    }
-                    system_guard.close_device(&*device_guard);
-                    device_guard.last_trigger = Utc::now();
-                    device_guard.status = false;
-                }
-            });
+        {
+            let mut system_guard = system.lock().await;
+            match system_guard.activate_pump().await {
+                Ok(_) => println!("Pump activated"),
+                Err(e) => println!("Error activating pump: {:?}", e),
+            };
         }
+        let system_clone = Arc::clone(&system);
+        task::spawn(async move {
+            let mut system_guard = system_clone.lock().await;
+            while system_guard.open_device_count > 0 {
+                sleep(system_guard.tick).await;
+                println!("Open device count: {}", system_guard.open_device_count);
+            }
+            match system_guard.deactivate_pump().await {
+                Ok(_) => println!("Pump deactivated"),
+                Err(e) => println!("Error deactivating pump: {:?}", e),
+            };
+        });
     }
+    Ok(())
 }
