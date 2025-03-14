@@ -1,7 +1,5 @@
 use crate::{config::config::DeviceConfig, plants::plant::Plant};
-use chrono::{DateTime, Duration, Utc};
-use reqwest::Error;
-use reqwest::StatusCode;
+use chrono::{Duration, Utc};
 use serde::Deserialize;
 use serde_json::json;
 
@@ -10,10 +8,7 @@ pub struct Device {
     pub(crate) id: u32,
     pub(crate) ip: String,
     pub(crate) pin: u8,
-    pub(crate) name: String,
-    pub(crate) cycle: Duration,
     pub(crate) duration: Duration,
-    pub(crate) last_trigger: DateTime<Utc>,
     pub(crate) status: bool,
     pub(crate) plants: Vec<Plant>,
 }
@@ -54,17 +49,14 @@ impl Device {
             id,
             ip,
             pin,
-            name,
-            cycle,
             duration,
             status: false,
-            last_trigger: Utc::now(),
             plants: target,
         }
     }
     pub(crate) async fn activate(&mut self) -> Result<String, reqwest::Error> {
         let client = reqwest::Client::new();
-        let url = format!("http://{}:8080/activate_device", self.ip);
+        let url = format!("http://{}:8080/activate", self.ip);
         let body = json!({
             "device_gpio": self.pin,
             "duration": self.duration.num_seconds()
@@ -89,7 +81,6 @@ impl Device {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Pump {
-    pub(crate) pin: u8,
     pub(crate) ip: String,
     pub(crate) status: bool,
 }
@@ -97,7 +88,6 @@ pub struct Pump {
 impl Pump {
     pub fn new(pump: Pump) -> Pump {
         Pump {
-            pin: pump.pin,
             ip: pump.ip,
             status: false,
         }

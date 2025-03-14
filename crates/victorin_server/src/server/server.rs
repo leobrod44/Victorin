@@ -72,14 +72,14 @@ async fn handle_websocket(ws: WebSocket, tx: Tx) {
     let mut rx = tx.subscribe();
     let (mut ws_tx, mut ws_rx) = ws.split();
 
-    println!(
-        "New WebSocket client connected! Subscribers: {}",
-        tx.receiver_count()
-    );
+    // println!(
+    //     "New WebSocket client connected! Subscribers: {}",
+    //     tx.receiver_count()
+    // );
 
     tokio::spawn(async move {
         while let Ok(msg) = rx.recv().await {
-            println!("Sending WebSocket message to client: {}", msg);
+            //println!("Sending WebSocket message to client: {}", msg);
             if let Err(e) = ws_tx.send(Message::text(msg)).await {
                 println!("WebSocket send error: {:?}", e);
             }

@@ -32,7 +32,7 @@ impl System {
                 device
                     .plants
                     .iter()
-                    .map(move |plant| (plant.valve_id, device.clone()))
+                    .map(move |plant| (device.id, device.clone()))
             })
             .collect();
 
@@ -53,7 +53,10 @@ impl System {
         drop(system_guard);
 
         loop {
-            check_devices(Arc::clone(&system)).await;
+            if let Err(e) = check_devices(Arc::clone(&system)).await {
+                println!("Error checking devices: {:?}", e);
+            };
+
             let _ = sleep(tick).await;
         }
     }
@@ -76,18 +79,9 @@ impl System {
     async fn activate_pump(&mut self) -> Result<String, reqwest::Error> {
         if !self.pump.status {
             let client = reqwest::Client::new();
-            let url = format!("http://{}:8080/activate_pump", self.pump.ip); // Updated URL for pump activation
-            let body = json!({
-                "device_gpio": self.pump.pin
-            });
+            let url = format!("http://{}:8080/activate_pump", self.pump.ip);
 
-            let response = client
-                .post(&url)
-                .header("Content-Type", "application/json")
-                .body(body.to_string())
-                .send()
-                .await?
-                .error_for_status()?;
+            let response = client.post(&url).send().await?.error_for_status()?;
 
             let response_text = response.text().await?;
             self.pump.status = true;
@@ -100,18 +94,9 @@ impl System {
     async fn deactivate_pump(&mut self) -> Result<String, reqwest::Error> {
         if self.pump.status {
             let client = reqwest::Client::new();
-            let url = format!("http://{}:8080/deactivate_pump", self.pump.ip); // Updated URL for pump activation
-            let body = json!({
-                "device_gpio": self.pump.pin
-            });
+            let url = format!("http://{}:8080/deactivate_pump", self.pump.ip);
 
-            let response = client
-                .post(&url)
-                .header("Content-Type", "application/json")
-                .body(body.to_string())
-                .send()
-                .await?
-                .error_for_status()?;
+            let response = client.post(&url).send().await?.error_for_status()?;
 
             let response_text = response.text().await?;
             self.pump.status = false;
@@ -119,26 +104,6 @@ impl System {
         } else {
             Ok("Pump is already inactive".to_string())
         }
-    }
-
-    pub async fn activate_remote_valve(&self, device: &Device) -> Result<String, Error> {
-        let client = reqwest::Client::new();
-        let url = format!("http://{}:8080/activate", device.ip); // Fixed the URL format
-        let body = json!({
-            "device": device.pin,
-            "duration": device.cycle.num_seconds()
-        });
-
-        let response = client
-            .post(&url)
-            .header("Content-Type", "application/json")
-            .body(body.to_string()) // Convert the JSON value to a string
-            .send()
-            .await?; // Use `?` to propagate errors
-
-        let response_text = response.text().await?; // Use `?` to propagate errors
-
-        Ok(response_text)
     }
 
     pub fn register_cycle_complete_listener(
@@ -150,8 +115,15 @@ impl System {
     }
 
     pub fn complete_cycle(&mut self, device_id: u32) {
+        println!("{:?}", self.cycle_listeners);
         if let Some(sender) = self.cycle_listeners.remove(&device_id) {
-            let _ = sender.send(());
+            match sender.send(()) {
+                Ok(_) => println!("Complete signal sent for device {}", device_id),
+                Err(e) => println!(
+                    "Error sending cycle complete signal for device {}: {:?}",
+                    device_id, e
+                ),
+            }
         }
     }
 }
@@ -176,6 +148,7 @@ pub async fn check_devices(system: Arc<Mutex<System>>) -> Result<(), Error> {
         //open pump
         {
             let mut system_guard = system.lock().await;
+            system_guard.to_trigger = vec![];
             match system_guard.activate_pump().await {
                 Ok(_) => println!("Pump activated"),
                 Err(e) => println!("Error activating pump: {:?}", e),
@@ -183,15 +156,21 @@ pub async fn check_devices(system: Arc<Mutex<System>>) -> Result<(), Error> {
         }
         let system_clone = Arc::clone(&system);
         task::spawn(async move {
-            let mut system_guard = system_clone.lock().await;
-            while system_guard.open_device_count > 0 {
-                sleep(system_guard.tick).await;
-                println!("Open device count: {}", system_guard.open_device_count);
+            loop {
+                let mut system_guard = system_clone.lock().await;
+                println!("{}", cycle_listeners.len());
+                if system_guard.cycle_listeners.len() == 0 {
+                    match system_guard.deactivate_pump().await {
+                        Ok(_) => println!("Pump deactivated"),
+                        Err(e) => println!("Error deactivating pump: {:?}", e),
+                    };
+                    break;
+                }
+
+                // Explicitly drop the lock before sleeping
+                drop(system_guard);
+                sleep(Duration::from_secs_f64(0.05)).await;
             }
-            match system_guard.deactivate_pump().await {
-                Ok(_) => println!("Pump deactivated"),
-                Err(e) => println!("Error deactivating pump: {:?}", e),
-            };
         });
     }
     Ok(())

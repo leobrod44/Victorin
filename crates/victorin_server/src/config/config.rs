@@ -26,6 +26,11 @@ pub struct DeviceRequest {
     pub device_id: u32,
 }
 
+#[derive(Deserialize, Debug)]
+pub struct DevicePin {
+    pub device_gpio: u8,
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 pub struct PlantConfig {
     pub id: u32,
