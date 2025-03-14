@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+futures-util = "0.3"
 chrono = "0.4.39"
 clippy = "0.0.302"
 rppal = "0.22.1"

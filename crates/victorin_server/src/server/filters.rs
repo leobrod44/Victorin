@@ -1,8 +1,8 @@
 use crate::{server::handlers, system::system::System};
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
-use tokio::sync::Mutex;
-use warp::Filter;
+use tokio::sync::{broadcast::Sender, Mutex};
+use warp::{filters::BoxedFilter, Filter};
 
 #[derive(serde::Deserialize)]
 pub struct PlantHumidity {
@@ -50,18 +50,17 @@ pub fn cycle_complete(
         .and(warp::post())
         .and(json_body())
         .and(with_system(system))
-        .and_then(handlers::activate_device)
+        .and_then(handlers::cycle_complete)
 }
 
-/// POST notify plant humidity
-pub fn humidity_plant(
-) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("humidity_plant")
+pub fn humidity_plant(tx: Sender<String>) -> BoxedFilter<(impl warp::Reply,)> {
+    warp::path("humidity_plant")
         .and(warp::post())
-        .and(json_body())
+        .and(json_body()) // Parses the JSON payload into `PlantHumidity`
+        .and(warp::any().map(move || tx.clone())) // Passes the sender
         .and_then(handlers::humidity_plant)
+        .boxed()
 }
-
 fn with_system(
     system: Arc<Mutex<System>>,
 ) -> impl Filter<Extract = (Arc<Mutex<System>>,), Error = std::convert::Infallible> + Clone {

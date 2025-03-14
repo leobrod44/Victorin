@@ -1,17 +1,14 @@
 use crate::{config::config::DeviceConfig, plants::plant::Plant};
-use chrono::{DateTime, Duration, Utc};
-use rppal::gpio::Gpio;
+use chrono::{Duration, Utc};
+use serde::Deserialize;
+use serde_json::json;
 
 #[derive(Debug, Clone)]
 pub struct Device {
     pub(crate) id: u32,
     pub(crate) ip: String,
     pub(crate) pin: u8,
-    pub(crate) gpio: Gpio,
-    pub(crate) name: String,
-    pub(crate) cycle: Duration,
     pub(crate) duration: Duration,
-    pub(crate) last_trigger: DateTime<Utc>,
     pub(crate) status: bool,
     pub(crate) plants: Vec<Plant>,
 }
@@ -27,7 +24,7 @@ impl From<&DeviceConfig> for Device {
             .collect();
 
         Device::new(
-            config.id,
+            config.device_id,
             config.ip.clone(),
             config.pin,
             config.name.clone(),
@@ -52,60 +49,47 @@ impl Device {
             id,
             ip,
             pin,
-            gpio: Gpio::new().expect("Failed to initialize GPIO"),
-            name,
-            cycle,
             duration,
             status: false,
-            last_trigger: Utc::now(),
             plants: target,
         }
     }
-    pub(crate) fn activate(&self) {
-        println!("Device activated {}", self.name);
-        self.gpio
-            .get(self.pin)
-            .expect("Failed to get pin")
-            .into_output()
-            .set_low();
+    pub(crate) async fn activate(&mut self) -> Result<String, reqwest::Error> {
+        let client = reqwest::Client::new();
+        let url = format!("http://{}:8080/activate", self.ip);
+        let body = json!({
+            "device_gpio": self.pin,
+            "duration": self.duration.num_seconds()
+        });
+
+        let _ = client
+            .post(&url)
+            .header("Content-Type", "application/json")
+            .body(body.to_string())
+            .send()
+            .await?
+            .error_for_status()?;
+
+        self.status = true;
+        Ok(format!("Device {} activated", self.id))
     }
-    pub(crate) fn deactivate(&self) {
-        println!("Device deactivated {}", self.name);
-        self.gpio
-            .get(self.pin)
-            .expect("Failed to get pin")
-            .into_output()
-            .set_high();
+
+    pub(crate) fn deactivate(&mut self) {
+        self.status = false;
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Pump {
-    pub(crate) pin: u8,
-    pub(crate) gpio: Gpio,
+    pub(crate) ip: String,
     pub(crate) status: bool,
 }
 
 impl Pump {
-    pub fn new(pin: u8) -> Pump {
+    pub fn new(pump: Pump) -> Pump {
         Pump {
-            pin,
-            gpio: Gpio::new().expect("Failed to initialize GPIO"),
+            ip: pump.ip,
             status: false,
-        }
-    }
-    pub(crate) fn activate(&mut self) {
-        if !self.status {
-            // self.gpio.get(self.pin).expect("Failed to get pin").into_output().set_low();
-            self.status = true;
-            println!("Pump activated");
-        }
-    }
-    pub(crate) fn deactivate(&mut self) {
-        if self.status {
-            //self.gpio.get(self.pin).expect("Failed to get pin").into_output().set_high();
-            self.status = false;
-            println!("Pump deactivated");
         }
     }
 }

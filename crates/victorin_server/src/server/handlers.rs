@@ -1,5 +1,7 @@
-use crate::config::config::DeviceConfig;
+use crate::config::config::DevicePin;
+use crate::config::config::DeviceRequest;
 use crate::config::config::PlantConfig;
+use crate::server::server::Tx;
 use crate::system::system::System;
 use std::convert::Infallible;
 use std::sync::Arc;
@@ -8,45 +10,55 @@ use tokio::sync::Mutex;
 use warp::http::StatusCode;
 
 pub async fn activate_device(
-    device: DeviceConfig,
+    device: DeviceRequest,
     system: Arc<Mutex<System>>,
 ) -> Result<impl warp::Reply, Infallible> {
+    println!("Activating device... {}", device.device_id);
+
     let mut system = system.lock().await;
-    let Some(device) = system.plant_devices.get(&device.id).cloned() else {
+    let Some(device) = system
+        .devices
+        .iter()
+        .find(|d| d.id == device.device_id)
+        .cloned()
+    else {
         return Ok(StatusCode::NOT_FOUND);
     };
+
     let (tx, rx) = oneshot::channel();
 
     system.register_cycle_complete_listener(device.id, tx);
-    system.activate_remote_valve(&device).await;
+    system.register_device(device.clone());
 
     println!("activated_device {}", device.id);
+    drop(system);
+    tokio::spawn(async move {
+        match tokio::time::timeout(std::time::Duration::from_secs(60), rx).await {
+            Ok(Ok(())) => {
+                println!("Cycle complete for device {}", device.id);
+            }
+            Ok(Err(_)) => {
+                println!("Cycle complete signal failed for device {}", device.id);
+            }
+            Err(_) => {
+                println!(
+                    "Timed out waiting for cycle complete for device {}",
+                    device.id
+                );
+            }
+        }
+    });
 
-    match tokio::time::timeout(std::time::Duration::from_secs(60), rx).await {
-        Ok(Ok(())) => {
-            println!("Cycle complete for device {}", device.id);
-            Ok(StatusCode::OK)
-        }
-        Ok(Err(_)) => {
-            println!("Cycle complete signal failed for device {}", device.id);
-            Ok(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-        Err(_) => {
-            println!(
-                "Timed out waiting for cycle complete for device {}",
-                device.id
-            );
-            Ok(StatusCode::REQUEST_TIMEOUT)
-        }
-    }
+    Ok(StatusCode::ACCEPTED)
 }
 
 pub async fn cycle_complete(
-    device: DeviceConfig,
+    device: DeviceRequest,
     system: Arc<Mutex<System>>,
 ) -> Result<impl warp::Reply, Infallible> {
+    println!("Received cycle complete for device... {}", device.device_id);
     let mut system = system.lock().await;
-    system.complete_cycle(device.id);
+    system.complete_cycle(device.device_id);
     Ok(StatusCode::OK)
 }
 
@@ -73,8 +85,16 @@ pub async fn water_plant(
     system.register_device(device);
     Ok(StatusCode::OK)
 }
-pub async fn humidity_plant(plant: PlantHumidity) -> Result<impl warp::Reply, Infallible> {
-    println!("plant humidity: {}, {}", plant.id, plant.humidity);
-    //TODO send plant data to app db
+pub async fn humidity_plant(plant: PlantHumidity, tx: Tx) -> Result<impl warp::Reply, Infallible> {
+    let message = format!(r#"{{"id": {}, "humidity": {}}}"#, plant.id, plant.humidity);
+    //println!("Broadcasting message: {}", message);
+
+    match tx.send(message.clone()) {
+        Ok(_) => {}
+        Err(e) => println!("Error sending message: {:?}", e),
+    }
+
+    //println!("Subscribers after sending: {}", tx.receiver_count());
+
     Ok(StatusCode::OK)
 }
