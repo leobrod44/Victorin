@@ -10,7 +10,7 @@ import Foundation
 class WebSocketManager: ObservableObject {
     static let shared = WebSocketManager()
     private var webSocketTask: URLSessionWebSocketTask?
-    private let url = URL(string: "ws://127.0.0.1:3030/humidity_updates")! // Update with your server's WebSocket URL
+    private let url = URL(string: "ws://192.168.0.15:3031/humidity_updates")! // Update with your server's WebSocket URL
     
     @Published var humidityUpdates: [Int: Double] = [:] // Dictionary to store humidity by device ID
 
@@ -55,7 +55,7 @@ class WebSocketManager: ObservableObject {
         do {
             let update = try JSONDecoder().decode(HumidityUpdate.self, from: data)
             DispatchQueue.main.async {
-                self.humidityUpdates[update.device] = update.humidity
+                self.humidityUpdates[update.id] = update.humidity
             }
         } catch {
             print("Failed to decode humidity update: \(error)")
@@ -64,6 +64,6 @@ class WebSocketManager: ObservableObject {
 }
 
 struct HumidityUpdate: Decodable {
-    let device: Int
+    let id: Int
     let humidity: Double
 }

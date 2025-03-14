@@ -79,13 +79,14 @@ struct ContentView: View {
 
 struct PlantView: View {
     @Binding var plant: Plant
-    var onEdit: () -> Void // Closure to handle edit'
-    
+    var onEdit: () -> Void
+
     @ObservedObject private var webSocketManager = WebSocketManager.shared
-    
-    @State private var isWatering = false // Tracks watering state for the animation
-    @State private var humidity: Double = 0.0 // Initial humidity value
-    
+
+    @State private var isWatering = false
+    @State private var wateringProgress: Double = 0.0
+    @State private var humidity: Double = 0.0
+
     var body: some View {
         GeometryReader { geometry in
             VStack {
@@ -94,9 +95,9 @@ struct PlantView: View {
                         .font(.headline)
                         .padding(.top, 5)
                         .frame(maxWidth: .infinity, alignment: .center)
-                    
+
                     Spacer()
-                    
+
                     Button(action: onEdit) {
                         Image(systemName: "ellipsis")
                             .foregroundColor(.white)
@@ -108,7 +109,7 @@ struct PlantView: View {
                     .padding(.top, 4)
                     .padding(.trailing, 2)
                 }
-                
+
                 ZStack {
                     HStack {
                         Spacer()
@@ -121,36 +122,49 @@ struct PlantView: View {
                         Spacer()
                     }
                 }
-                
+
                 Spacer()
-                
+
                 HStack {
+                    // Humidity Value with Color Circle
                     ZStack {
                         Circle()
-                            .fill(Color.cyan)
-                            .frame(width: 50, height: 50) // Increased size for better readability
+                            .fill(humidityColor(humidity))
+                            .frame(width: 50, height: 50)
                         
-                        Text("\(humidity)%") // Display humidity inside the circle
-                            .font(.caption)
+                        Text("\(Int(humidity))%")
+                            .font(.headline)
                             .foregroundColor(.white)
                     }
-                    
-                    Button(action: {
-                        triggerWatering(plant: plant)
-                    }) {
+
+                    // Water Button / Progress Indicator
+                    ZStack {
                         if isWatering {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                                .frame(maxWidth: .infinity)
+                            Circle()
+                                .stroke(Color.cyan.opacity(0.3), lineWidth: 5)
+                                .frame(width: 60, height: 60)
+
+                            Circle()
+                                .trim(from: 0, to: CGFloat(wateringProgress))
+                                .stroke(Color.cyan, lineWidth: 5)
+                                .rotationEffect(.degrees(-90))
+                                .frame(width: 60, height: 60)
+                                .animation(.linear(duration: Double(plant.duration)), value: wateringProgress)
+
+                            Text("\(Int(wateringProgress * 100))%")
+                                .font(.caption)
+                                .foregroundColor(.cyan)
                         } else {
-                            Text("Water")
-                                .frame(maxWidth: .infinity)
+                            Button(action: { triggerWatering(plant: plant) }) {
+                                Text("Water")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(width: 100, height: 40)
+                                    .background(Color.cyan)
+                                    .cornerRadius(10) // ✅ Now a rounded rectangle
+                            }
                         }
                     }
-                    .padding(.vertical, 5)
-                    .background(isWatering ? Color.gray : Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
                 }
                 .padding(.top, 10)
             }
@@ -158,8 +172,8 @@ struct PlantView: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 15)
                     .stroke(Color.gray, lineWidth: 1)
-            ).onAppear {
-                // Update the humidity from the WebSocket when the view appears
+            )
+            .onAppear {
                 updateHumidity()
             }
             .onChange(of: webSocketManager.humidityUpdates) { _ in
@@ -168,58 +182,73 @@ struct PlantView: View {
         }
         .frame(minHeight: 250)
     }
-    
+
     func updateHumidity() {
         if let updatedHumidity = webSocketManager.humidityUpdates[plant.device] {
             humidity = updatedHumidity
         }
     }
-    
+
     func triggerWatering(plant: Plant) {
-        
-        guard let url = URL(string: "http://127.0.0.1:3030/water_plant") else {
+        guard let url = URL(string: "http://192.168.0.15:3031/activate_device") else {
             print("Invalid URL")
-            isWatering = false
             return
         }
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let body: [String: Any] = [
-            "id": plant.device,
-            "name": plant.name
+            "device_id": plant.device
         ]
-        
+
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
         } catch {
             print("Failed to encode JSON")
-            isWatering = false
             return
         }
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 if let error = error {
                     print("Error: \(error.localizedDescription)")
                 } else if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
-                    isWatering = true // Start loading animation
                     print("Watering triggered successfully!")
                     
-                    // Simulate waiting for the Raspberry Pi response
-                    DispatchQueue.main.asyncAfter(deadline: .now() + Double(plant.duration)) {
-                        isWatering = false // End loading animation
+                    isWatering = true
+                    wateringProgress = 0.0
+
+                    Timer.scheduledTimer(withTimeInterval: Double(plant.duration) / 100, repeats: true) { timer in
+                        if wateringProgress >= 1.0 {
+                            timer.invalidate()
+                            isWatering = false
+                        } else {
+                            wateringProgress += 0.01
+                        }
                     }
                 } else {
                     print("Failed to water plant.")
-                    isWatering = false
                 }
             }
         }.resume()
     }
+
+    func humidityColor(_ humidity: Double) -> Color {
+        switch humidity {
+        case 0..<25:
+            return .red
+        case 25..<50:
+            return .orange
+        case 50..<75:
+            return .yellow
+        default:
+            return .green
+        }
+    }
 }
+
 
 
 
