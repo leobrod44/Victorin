@@ -8,8 +8,8 @@ import _thread
 import sys
 
 # Wi-Fi Configuration
-WIFI_SSID = "Balais"
-WIFI_PASSWORD = "dUst102!"
+WIFI_SSID = ""
+WIFI_PASSWORD = ""
 
 # Devices Configuration
 DEVICES = {
